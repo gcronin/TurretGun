@@ -12,8 +12,8 @@ float lfader=0;
 float rfader=0;
 float xPad;
 float yPad;
-int OSCmode = 1;  //1 for accelerometer, 0 for sliders
-      //////////////////////////////accelerometer variables////////////////////////////////
+
+////////////////////////////////////accelerometer variables////////////////////////////////
 float xrot = 0;
 float zrot = 0;
 float xrot_targ = 0;
@@ -26,7 +26,7 @@ Serial myPort;
 int[] serialInArray = new int[17];    // Where we'll put what we receive
 int serialCount = 0; 
 int checksum = 0;
-int Serial = 1;    // make 0 to test Processing only (turns off serial connections)... default is one
+int Serial = 0;    // make 0 to test Processing only (turns off serial connections)... default is one
 
 
 ///////////////////////////////////SENSOR READINGS///////////////////////////////////////////////////////
@@ -137,14 +137,13 @@ void draw()
   line(0, 256, 512,256);   //x axis
   line(256, 0, 256, 512);  //y axis
   fill(0,0,0);
-  stroke(255,0,0);
-  ellipseMode(CENTER);
+  stroke(255,0,0);   // makes a bulls-eye at turret position
+  ellipseMode(CENTER);  
   ellipse(map(pan, 200, 823, 512, 0), map(tilt, tilt_min, tilt_max, 0, 512), 25, 25);
   ellipse(map(pan, 200, 823, 512, 0), map(tilt, tilt_min, tilt_max, 0, 512), 15, 15);
   line(map(pan, 200, 823, 512, 0), map(tilt, tilt_min, tilt_max, 0, 512)+20, map(pan, 200, 823, 512, 0), map(tilt, tilt_min, tilt_max, 0, 512)-20);
   line(map(pan, 200, 823, 512, 0)+20, map(tilt, tilt_min, tilt_max, 0, 512), map(pan, 200, 823, 512, 0)-20, map(tilt, tilt_min, tilt_max, 0, 512));
-  stroke(255); 
-  //rect(map(pan, 200, 823, 512, 0)-5, map(tilt, tilt_min, tilt_max, 0, 512)-5, 10, 10);  // makes a square at turret position
+  stroke(255);  //display pan and tilt numbers 
   fill(255);
   pan_low = (pan&0xFF);
   pan_high = ((pan>>8)&0x03);
@@ -156,12 +155,9 @@ void draw()
   text(tilt, 10, 490);
   
   ///////////////////////////////PROCESS ACCELEROMETER DATA///////////////////////////////////////////////////
-  if(OSCmode == 1)
-  {
-   accelerometer_smoothing();
-   map_accelerometer_to_motorvalues(deadband, 100);
-  }
-  
+  accelerometer_smoothing();
+  map_accelerometer_to_motorvalues(deadband, 100);
+    
   /////////////////////////////////DISPLAY MOTOR INFORMATION///////////////////////////////////////////////////
   text("Left:", 10, 20);
   text(leftmotor, 10, 40);
@@ -243,21 +239,16 @@ void sendPacket(int _panbyte1, int _panbyte2, int _tiltbyte1, int _tiltbyte2, in
 void accelerometer_smoothing()
 {
     if (xrot_targ > xrot) 
-    {
       xrot = xrot + ((xrot_targ - xrot) / dampSpeed);
-    }   
+       
     else 
-    {
       xrot = xrot - ((xrot - xrot_targ) / dampSpeed);
-    }
+    
     if (zrot_targ > zrot) 
-    {
       zrot = zrot + ((zrot_targ - zrot) / dampSpeed);
-    } 
+     
     else 
-    {
       zrot = zrot - ((zrot - zrot_targ) / dampSpeed);
-    }
 }
 
 void map_accelerometer_to_motorvalues(float _deadband, float speed_limit)
@@ -282,25 +273,25 @@ void map_accelerometer_to_motorvalues(float _deadband, float speed_limit)
     y = adj_val2;
     
     if (y > deadband_high) 
-    {  // if the Up/Down R/C input is above the upper threshold, go FORWARD 
+    {  // if the Up/Down accelerometer input is above the upper threshold, go FORWARD 
 
-      // now check to see if left/right input from R/C is to the left, to the right, or centered.
+      // now check to see if left/right input from accelerometer is to the left, to the right, or centered.
 
       if (x > deadband_high) 
-      { // go forward while turning right proportional to the R/C left/right input
+      { // go forward while turning right proportional to the accelerometer left/right input
         leftmotor = int(y);
         rightmotor = int(y - (x*turn_scale_factor));
         // quadrant 1
       }
 
       else if (x < deadband_low) 
-      {   // go forward while turning left proportional to the R/C left/right input
+      {   // go forward while turning left proportional to the accelerometer left/right input
         leftmotor = int(y - ( x * -1 * turn_scale_factor));  // remember that in this case, y will be a negative number
         rightmotor = int(y);
         // quadrant 2
       }
       else 
-      {   // left/right stick is centered, go straight forward
+      {   // left/right accelerometer is centered, go straight forward
         leftmotor = int(y);
         rightmotor = int(y);
       }
@@ -311,26 +302,26 @@ void map_accelerometer_to_motorvalues(float _deadband, float speed_limit)
       // now check to see if left/right input is to the left, to the right, or centered.
 
       if (x > deadband_high) 
-      { // go forward while turning right proportional to the R/C left/right input
+      { // go forward while turning right proportional to the accelerometer left/right input
         leftmotor = int(y - ( x * -1 * turn_scale_factor)); 
         rightmotor = int(y); 
         // quadrant 3
       }
 
       else if (x < deadband_low) 
-      {   // go forward while turning left proportional to the R/C left/right input
+      {   // go forward while turning left proportional to the accelerometer left/right input
         leftmotor = int(y);  // remember that in this case, y will be a negative number
         rightmotor = int(y - (x * turn_scale_factor));
         // quadrant 4
       }
       else 
-      {   // left/right stick is centered, go straight forward
+      {   // left/right accelerometer is centered, go straight forward
         leftmotor = int(y);
         rightmotor = int(y);
       }
     }
     else 
-    {     // if neither of the above 2 conditions is met, the Up/Down input is centered (neutral)
+    {     // if neither of the above 2 conditions is met, the Up/Down accelerometer is centered (neutral)
 
       if (abs(x) > deadband_high)   //spin in place
       {
@@ -384,42 +375,11 @@ void oscEvent(OscMessage theOscMessage)
         pan = int(map(yPad, 0, 1023, 823, 200));
         tilt = int(map(xPad, 0, 1023, tilt_max, tilt_min));
     }
-    if(OSCmode==1) //use accelerometer
+    if(theOscMessage.checkAddrPattern("/accxyz")==true) //accelerometer data
     {
-      if(theOscMessage.checkAddrPattern("/accxyz")==true) 
-      {
         xrot_targ = (theOscMessage.get(0).floatValue()*90);  
         zrot_targ = (theOscMessage.get(1).floatValue()*90)*-1;
         orientation = theOscMessage.get(2).floatValue();
-      }
-    }
-    else  //use sliders
-    {
-      if(addr.indexOf("/1/fader5") !=-1)  //LEFTDRIVE
-      {
-         String list[] = split(addr,'/');
-         int  xfader = int(list[2].charAt(5) - 0x30);
-         if(theOscMessage.get(0).floatValue() !=0)
-         {
-         lfader  = theOscMessage.get(0).floatValue();
-         leftmotor = (int)lfader;
-         if(abs(leftmotor)<deadband) {leftmotor = 0;}  //deadband
-         leftmotor_mapped = int(map(leftmotor, -100, 100, 30, 225)); 
-         }
-      }  
-     
-      if(addr.indexOf("/1/fader4") !=-1)  //RIGHTDRIVE
-      {
-         String list[] = split(addr,'/');
-         int  xfader = int(list[2].charAt(5) - 0x30);
-         if(theOscMessage.get(0).floatValue() !=0)
-         {
-         rfader  = theOscMessage.get(0).floatValue();
-         rightmotor = (int)rfader;
-         if(abs(rightmotor)<deadband) {rightmotor = 0;}  //deadband
-         rightmotor_mapped = int(map(rightmotor, -100, 100, 30, 225)); 
-         }
-      }
     }      
   }
 }
